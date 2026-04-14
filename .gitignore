@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Databases
+architecture/chroma_db/
+*.db
+*.sqlite3
+
+# Frontend
+scene/steam-web/node_modules/
+scene/steam-web/.next/
+scene/steam-web/out/
+scene/steam-web/build/
+
+# IDE
+.vscode/
+.idea/
+
+# Large Data files
+reviewdata/
+*.csv
+*.json

@@ -1,0 +1,28 @@
+# Backend & API
+fastapi==0.129.0
+uvicorn==0.41.0
+httpx==0.28.1
+python-dotenv==1.2.1
+pydantic
+
+# LLM & RAG Framework
+langchain==1.2.14
+langchain-openai==1.1.12
+langchain-community==0.4.1
+langchain-chroma==1.1.0
+chromadb==1.5.5
+openai==2.30.0
+
+# Data Processing
+pandas==2.3.3
+numpy==2.2.6
+tqdm==4.67.1
+
+# Machine Learning & Evaluation
+scikit-learn==1.8.0
+matplotlib==3.10.8
+seaborn==0.13.2
+
+# Morphological Analysis
+soynlp
+konlpy
