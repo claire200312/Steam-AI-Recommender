@@ -23,22 +23,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from dotenv import load_dotenv
-
-# .env 파일 로드
-load_dotenv()
-
-# OpenAI API Key 설정
-# 하드코딩된 키를 제거하고 환경변수에서 가져옵니다.
-if not os.getenv("OPENAI_API_KEY"):
-    print("[WARNING] OPENAI_API_KEY가 설정되지 않았습니다. .env 파일이 있는지 확인하세요.")
-
-
-# DB 경로 설정 (상위 폴더의 architecture/chroma_db 참조)
 # 2. 전역 설정 및 모델 초기화
-# 노트북 경로와 일치시키기 위해 상대 경로를 더 명확히 설정합니다.
+from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# .env 파일 경로를 루트 폴더로 명시적 지정, override=True를 추가하여 시스템 환경변수보다 .env 우선
+load_dotenv(os.path.join(BASE_DIR, "../../.env"), override=True)
+
 CHROMA_PATH = os.path.join(BASE_DIR, "../../architecture/chroma_db")
+
+# API 키 누락 여부 확인
+if not os.getenv("OPENAI_API_KEY"):
+    print("[ERROR] OPENAI_API_KEY가 설정되지 않았습니다. .env 파일을 확인해주세요.")
 
 embeddings = OpenAIEmbeddings()
 
@@ -60,7 +55,7 @@ except Exception as e:
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 # 3. CSV 데이터 로드 (관리자 대시보드 연동용)
-CSV_PATH = "../../reviewdata/popgame.csv"
+CSV_PATH = os.path.join(BASE_DIR, "../../reviewdata/popgame.csv")
 
 def load_reviews_from_csv():
     encodings = ['utf-8-sig', 'utf-8', 'cp949', 'euc-kr']
@@ -72,7 +67,7 @@ def load_reviews_from_csv():
                 return df
         except Exception as e:
             continue
-    print("CSV Load Error: 모든 인코딩 시도 실패")
+    print(f"CSV Load Error: 파일이 없거나 모든 인코딩 시도 실패 ({CSV_PATH})")
     return None
 
 # 4. 인메모리 로그 (데모용)
@@ -232,20 +227,36 @@ async def recommend_games(request: RecommendRequest):
         # LLM 실행 (노트북과 동일한 query 변수 사용)
         response = await asyncio.to_thread(chain.invoke, {"context": context, "question": query})
         
-        # JSON 결과 파싱
-        content = response.content.replace("```json", "").replace("```", "").strip()
-        results = json.loads(content)
+        # JSON 결과 파싱 (정규표현식을 사용하여 JSON 블록만 추출)
+        import re
+        content = response.content.strip()
+        json_match = re.search(r'\[.*\]', content, re.DOTALL)
+        if json_match:
+            content = json_match.group(0)
+        else:
+            # 대괄호가 없는 경우 (단일 객체일 가능성 등 대비)
+            content = content.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            results = json.loads(content)
+        except json.JSONDecodeError as json_err:
+            print(f"[ERROR] JSON Parsing Failed: {json_err}\nRaw Content: {content}")
+            raise HTTPException(status_code=500, detail="LLM의 응답 형식이 올바르지 않습니다.")
         
         # 쿼리 로그 저장
         query_logs.append({
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "query": request.query,
-            "results": [r["game_name"] for r in results]
+            "results": [r.get("game_name", "Unknown") for r in results]
         })
         
         return results
         
     except Exception as e:
+        print(f"[CRITICAL ERROR] {str(e)}")
+        # OpenAI API 에러인 경우 더 명확한 메시지 제공
+        if "invalid_api_key" in str(e) or "401" in str(e):
+            raise HTTPException(status_code=401, detail="OpenAI API 키가 유효하지 않습니다. .env 파일을 확인해주세요.")
         raise HTTPException(status_code=500, detail=str(e))
 
 # 6. 관리자 API
