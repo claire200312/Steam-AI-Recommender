@@ -10,22 +10,18 @@ env/
 venv/
 ENV/
 
-# Databases
-architecture/chroma_db/
-*.db
-*.sqlite3
-
-# Frontend
-scene/steam-web/node_modules/
-scene/steam-web/.next/
-scene/steam-web/out/
-scene/steam-web/build/
-
 # IDE
 .vscode/
 .idea/
 
-# Large Data files
-reviewdata/
+# Data and Databases
 *.csv
-*.json
+*.sqlite3
+chroma_db/
+reviewdata/
+
+# Frontend
+node_modules/
+.next/
+dist/
+build/
